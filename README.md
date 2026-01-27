@@ -13,7 +13,7 @@ Detects craters in an image using Segment Anything (SAM). It fits a circle to ea
 ## Setup
 
 ```bash
-git clone <https://github.com/dajuarez4/MooCraDee>
+git clone https://github.com/dajuarez4/MooCraDee
 cd crater-detector-sam
 
 python -m venv .venv
