@@ -1,7 +1,7 @@
 # MooCraDee — Crater Detector (SAM)
 
 <p align="center">
-  <img src="assets/banner.png" width="900" alt="MooCraDee banner"/>
+  <img src="assets/banner.png" width="400" alt="MooCraDee banner"/>
 </p>
 
 <p align="center">
@@ -26,16 +26,10 @@ Given a crater image, **MooCraDee** uses **Segment Anything (SAM)** to segment c
 - saves a **CSV** with crater parameters: **(x, y, radius)**
 
 ---
-
-## Demo
-
-> Add your images here (recommended):
-> - `assets/input.png` = input image  
-> - `assets/sam_out.png` = annotated output (red circles)
-
+Results after testing beta 1
 <p align="center">
-  <img src="assets/find_jackson_crater.png" width="360" alt="Input image"/>
-  <img src="assets/sam_out.png" width="360" alt="Output with circles"/>
+  <img src="assets/find_jackson_crater.png" width="460" alt="Input image"/>
+  <img src="assets/sam_out.png" width="460" alt="Output with circles"/>
 </p>
 
 <p align="center"><b>Left:</b> input image. <b>Right:</b> detected craters + circle fits.</p>
