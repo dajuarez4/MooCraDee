@@ -32,7 +32,7 @@ Results after testing beta 1
   <img src="assets/sam_out.png" width="460" alt="Output with circles"/>
 </p>
 
-<p align="center"><b>Left:</b> input image. <b>Right:</b> detected craters + circle fits.</p>
+<p align="center"><b>upper panel:</b> input image. <b>lower panel:</b> detected craters + circle fits.</p>
 
 ---
 
