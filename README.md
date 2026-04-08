@@ -36,6 +36,16 @@ Results after testing beta 1
 
 ---
 
+## Mercury Example
+
+<p align="center">
+  <img src="examples/mercury/mercury_test_out.png" width="460" alt="Mercury crater detection output"/>
+</p>
+
+<p align="center"><b>Mercury output:</b> crater detections and fitted circles from a Mercury test image.</p>
+
+---
+
 ## Requirements
 
 - **Python:** 3.10–3.12  
@@ -144,3 +154,10 @@ Lower → more masks (noisier).
 Removes duplicate circles using circle overlap IoU.  
 Lower → more aggressive dedup (keeps fewer circles).  
 Higher → allows more overlapping circles (can keep “double detections”).
+
+---
+
+## Future Work
+
+- UTEP implementation
+- Crater distribution for Mercury using the [MESSENGER MDIS enhanced-color global mosaic](https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_665m.tif)
