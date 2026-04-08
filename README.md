@@ -138,9 +138,9 @@ Lower → prevents huge circles that cover multiple structures.
 **`--min_circularity 0.35`**  
 Minimum “circle-likeness” for a mask. Computed as:
 
-\[
-\text{circularity}=\frac{4\pi A}{P^2}
-\]
+$$
+\text{circularity} = \frac{4 \pi A}{P^2}
+$$
 
 where `A` is mask area and `P` is mask perimeter.  
 `1.0` is a perfect circle; smaller values are more irregular.  
