@@ -51,6 +51,7 @@ Results after testing beta 1
 - **Python:** 3.10–3.12  
 - **OS:** Ubuntu recommended (works on other Linux/macOS if deps install)  
 - **Hardware:** CPU works; **GPU + CUDA** optional for speed  
+- **GPU runtime:** NVIDIA GPU + CUDA drivers + a CUDA-enabled PyTorch install  
 - **Model:** SAM checkpoint file (e.g., `sam_vit_b_01ec64.pth`)
 
 ---
@@ -68,6 +69,31 @@ pip install git+https://github.com/facebookresearch/segment-anything.git
 wget -O sam_vit_b_01ec64.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
 
 python deep_moocrade.py assets/find_jackson_crater.png --ckpt sam_vit_b_01ec64.pth --out examples/jackson/sam_out.png --csv examples/jackson/sam_radii.csv --min_radius 20 --max_radius 260 --min_circularity 0.35 --min_area 600 --pps 64 --pred_iou 0.80 --stability 0.85 --iou_dedup 0.12
+```
+
+## CPU and GPU Execution
+
+MooCraDee is already GPU-enabled through **PyTorch CUDA**. The script automatically selects:
+
+- **`cuda`** when `torch.cuda.is_available()` is `True`
+- **`cpu`** otherwise
+
+There is no separate flag to switch modes. To run on GPU:
+
+1. Use a machine with an **NVIDIA GPU**.
+2. Install the correct **NVIDIA/CUDA drivers**.
+3. Install a **CUDA-enabled PyTorch** build for your system.
+4. Run the same `python deep_moocrade.py ...` command.
+
+The script prints the selected device at runtime:
+
+- `Device: cuda` = GPU is active
+- `Device: cpu` = it fell back to CPU
+
+You can verify that PyTorch sees the GPU with:
+
+```bash
+python3 -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.device_count()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'no gpu')"
 ```
 
 ## Command parameters (what each one does)
@@ -160,5 +186,4 @@ Higher → allows more overlapping circles (can keep “double detections”).
 ## Future Work
 
 - UTEP implementation
-- GPU-enabled execution using PyCUDA
 - Crater distribution for Mercury using the [MESSENGER MDIS enhanced-color global mosaic](https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_665m.tif)
