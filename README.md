@@ -160,4 +160,5 @@ Higher → allows more overlapping circles (can keep “double detections”).
 ## Future Work
 
 - UTEP implementation
+- GPU-enabled execution using PyCUDA
 - Crater distribution for Mercury using the [MESSENGER MDIS enhanced-color global mosaic](https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_665m.tif)
