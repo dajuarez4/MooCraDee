@@ -1,0 +1,23 @@
+Using GPU/CUDA: Tesla T4
+Device: cuda
+Circulos finales: 20
+1: centro=(2224.1,191.0)  radio=55.5px  score=1.872
+2: centro=(2540.8,37.4)  radio=20.2px  score=1.872
+3: centro=(3476.5,493.0)  radio=32.5px  score=1.856
+4: centro=(519.0,197.0)  radio=20.6px  score=1.821
+5: centro=(3027.4,533.0)  radio=28.8px  score=1.817
+6: centro=(293.5,232.0)  radio=84.0px  score=1.816
+7: centro=(1494.6,463.0)  radio=29.2px  score=1.808
+8: centro=(220.5,98.5)  radio=31.8px  score=1.802
+9: centro=(3057.7,415.9)  radio=27.2px  score=1.796
+10: centro=(2821.3,369.4)  radio=25.2px  score=1.793
+11: centro=(1419.5,600.5)  radio=33.8px  score=1.793
+12: centro=(998.0,385.0)  radio=88.9px  score=1.770
+13: centro=(3884.0,559.5)  radio=26.2px  score=1.764
+14: centro=(1206.5,495.5)  radio=28.3px  score=1.757
+15: centro=(1351.0,106.0)  radio=80.6px  score=1.738
+16: centro=(776.7,203.1)  radio=24.4px  score=1.733
+17: centro=(2915.5,724.5)  radio=33.6px  score=1.729
+18: centro=(3728.0,656.0)  radio=39.1px  score=1.695
+19: centro=(3954.5,744.0)  radio=26.7px  score=1.674
+20: centro=(2894.5,161.0)  radio=80.7px  score=1.654
