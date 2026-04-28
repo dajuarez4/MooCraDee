@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+
+# Large files
+*.tif
+*.tiff
+*.pth
+
+# Large/generated outputs
+Mercury_split_*/
+outputs/
+
+# Colab/system
+.ipynb_checkpoints/
+.DS_Store
