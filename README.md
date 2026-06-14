@@ -1,4 +1,10 @@
 
+# PCS: Planetary Crater Segmentation
+
+PCS is a continuing development of the MooCraDee project, with a focus on making the crater-detection workflow reproducible and accessible through a GPU-enabled Google Colab notebook.
+
+This version keeps the original purpose of exploring crater detection in planetary imagery while adding a structured workflow for running experiments, testing images, adjusting parameters, visualizing results, and preparing outputs that can support future crater-candidate database development.
+
 # MooCraDee — Crater Detector (SAM)
 
 <p align="center">
