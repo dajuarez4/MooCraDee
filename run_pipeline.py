@@ -1,173 +1,235 @@
+```python
 #!/usr/bin/env python3
-# Run the full MooCraDee workflow:
-# 1. Split Mercury.tif into smaller parts.
-# 2. Run deep_moocrade.py on each part.
-# 3. Save each detected image and CSV.
-# 4. Create one combined CSV with all crater detections.
+"""
+Run the full PCS / MooCraDee split-image pipeline.
 
-import sys
-import csv
+This script:
+1. Splits a planetary image into smaller parts.
+2. Runs deep_moocrade.py on each part.
+3. Saves one detected image and CSV per part.
+4. Combines all part-level CSV files into one crater-candidate table.
+"""
+
+import argparse
 import subprocess
 from pathlib import Path
+
+import pandas as pd
 
 from split_image import split_image
 
 
-def check_files(image_path, ckpt_path, deep_script):
-    # This checks that the important files exist before starting the pipeline.
-    if not Path(image_path).exists():
-        raise FileNotFoundError(f"Image not found: {image_path}")
+def check_required_files(image_path, checkpoint_path, detector_script):
+    """Check that the input image, SAM checkpoint, and detector script exist."""
+    required_files = {
+        "Input image": image_path,
+        "SAM checkpoint": checkpoint_path,
+        "Detector script": detector_script,
+    }
 
-    if not Path(ckpt_path).exists():
-        raise FileNotFoundError(f"SAM checkpoint not found: {ckpt_path}")
-
-    if not Path(deep_script).exists():
-        raise FileNotFoundError(f"Detector script not found: {deep_script}")
+    for label, path in required_files.items():
+        if not path.exists():
+            raise FileNotFoundError(f"{label} not found: {path}")
 
 
-def run_detector_on_part(part, ckpt_path, deep_script):
-    # This runs deep_moocrade.py on one split image.
-    part_num = part["part_num"]
+def run_detector_on_part(part, args):
+    """Run deep_moocrade.py on one split image."""
+    part_number = part["part_num"]
     part_folder = Path(part["part_folder"])
     input_image = Path(part["output_file"])
 
     detected_image = part_folder / "detected.png"
-    csv_file = part_folder / "radii.csv"
+    part_csv = part_folder / "radii.csv"
     log_file = part_folder / "output.txt"
 
     command = [
-        sys.executable,
-        str(deep_script),
+        "python",
+        str(args.detector_script),
         str(input_image),
-        "--ckpt", str(ckpt_path),
+        "--ckpt", str(args.checkpoint),
         "--out", str(detected_image),
-        "--csv", str(csv_file),
-
-        # These are the same parameters from the original project example.
-        "--min_radius", "20",
-        "--max_radius", "260",
-        "--min_circularity", "0.35",
-        "--min_area", "600",
-        "--pps", "64",
-        "--pred_iou", "0.80",
-        "--stability", "0.85",
-        "--iou_dedup", "0.12",
+        "--csv", str(part_csv),
+        "--min_radius", str(args.min_radius),
+        "--max_radius", str(args.max_radius),
+        "--min_circularity", str(args.min_circularity),
+        "--min_area", str(args.min_area),
+        "--pps", str(args.points_per_side),
+        "--pred_iou", str(args.pred_iou),
+        "--stability", str(args.stability),
+        "--iou_dedup", str(args.iou_dedup),
     ]
 
     print("\n" + "=" * 60)
-    print(f"Running detector on part {part_num}")
+    print(f"Running detector on part {part_number}")
     print(f"Input: {input_image}")
     print(f"Output image: {detected_image}")
-    print(f"CSV: {csv_file}")
+    print(f"CSV: {part_csv}")
     print("=" * 60)
 
     result = subprocess.run(
         command,
         text=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
+        stderr=subprocess.STDOUT,
     )
 
     print(result.stdout)
-
-    # Save the terminal output so we can check Device: cuda later.
     log_file.write_text(result.stdout, encoding="utf-8")
 
     if result.returncode != 0:
-        raise RuntimeError(f"deep_moocrade.py failed on part {part_num}. Check {log_file}")
+        raise RuntimeError(
+            f"deep_moocrade.py failed on part {part_number}. Check log file: {log_file}"
+        )
 
 
-def combine_csvs(parts, output_dir):
-    # This creates one CSV with the crater detections from all parts.
-    # It also converts local coordinates into global coordinates.
+def combine_part_csvs(parts, output_dir):
+    """Combine part-level CSV files and convert local coordinates into global coordinates."""
+    rows = []
+
+    for part in parts:
+        part_number = part["part_num"]
+        part_csv = Path(part["part_folder"]) / "radii.csv"
+
+        if not part_csv.exists():
+            print(f"Warning: missing CSV for part {part_number}")
+            continue
+
+        part_df = pd.read_csv(part_csv)
+
+        if part_df.empty:
+            continue
+
+        part_df["part"] = part_number
+        part_df["local_id"] = part_df["id"]
+        part_df["local_x_px"] = part_df["x_px"]
+        part_df["local_y_px"] = part_df["y_px"]
+        part_df["global_x_px"] = part_df["x_px"] + part["x_offset"]
+        part_df["global_y_px"] = part_df["y_px"] + part["y_offset"]
+
+        rows.append(
+            part_df[
+                [
+                    "part",
+                    "local_id",
+                    "local_x_px",
+                    "local_y_px",
+                    "global_x_px",
+                    "global_y_px",
+                    "radius_px",
+                    "score",
+                ]
+            ]
+        )
+
     combined_csv = Path(output_dir) / "all_craters.csv"
 
-    with combined_csv.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
+    if rows:
+        combined_df = pd.concat(rows, ignore_index=True)
+    else:
+        combined_df = pd.DataFrame(
+            columns=[
+                "part",
+                "local_id",
+                "local_x_px",
+                "local_y_px",
+                "global_x_px",
+                "global_y_px",
+                "radius_px",
+                "score",
+            ]
+        )
 
-        writer.writerow([
-            "part",
-            "local_id",
-            "local_x_px",
-            "local_y_px",
-            "global_x_px",
-            "global_y_px",
-            "radius_px",
-            "score"
-        ])
-
-        for part in parts:
-            part_num = part["part_num"]
-            part_folder = Path(part["part_folder"])
-            part_csv = part_folder / "radii.csv"
-
-            if not part_csv.exists():
-                print(f"Warning: missing CSV for part {part_num}")
-                continue
-
-            with part_csv.open("r", newline="", encoding="utf-8") as file:
-                reader = csv.DictReader(file)
-
-                for row in reader:
-                    local_x = float(row["x_px"])
-                    local_y = float(row["y_px"])
-
-                    global_x = local_x + part["x_offset"]
-                    global_y = local_y + part["y_offset"]
-
-                    writer.writerow([
-                        part_num,
-                        row["id"],
-                        f"{local_x:.2f}",
-                        f"{local_y:.2f}",
-                        f"{global_x:.2f}",
-                        f"{global_y:.2f}",
-                        row["radius_px"],
-                        row["score"]
-                    ])
+    combined_df.to_csv(combined_csv, index=False)
 
     print(f"\nCombined CSV saved: {combined_csv}")
+    return combined_csv
+
+
+def parse_arguments():
+    """Define command-line options for the PCS split-image pipeline."""
+    parser = argparse.ArgumentParser(
+        description="Run PCS / MooCraDee on a planetary image using split-image processing."
+    )
+
+    parser.add_argument(
+        "--image",
+        default="mercury.jpg",
+        help="Input planetary image path. Default: mercury.jpg",
+    )
+
+    parser.add_argument(
+        "--splits",
+        type=int,
+        default=6,
+        help="Number of image parts. Must be a positive even integer.",
+    )
+
+    parser.add_argument(
+        "--checkpoint",
+        default="sam_vit_b_01ec64.pth",
+        help="SAM checkpoint path.",
+    )
+
+    parser.add_argument(
+        "--detector_script",
+        default="deep_moocrade.py",
+        help="Detector script path.",
+    )
+
+    parser.add_argument(
+        "--output_dir",
+        default=None,
+        help="Optional output directory. If not provided, one is created automatically.",
+    )
+
+    parser.add_argument("--min_radius", type=float, default=20)
+    parser.add_argument("--max_radius", type=float, default=260)
+    parser.add_argument("--min_circularity", type=float, default=0.35)
+    parser.add_argument("--min_area", type=int, default=600)
+    parser.add_argument("--points_per_side", type=int, default=64)
+    parser.add_argument("--pred_iou", type=float, default=0.80)
+    parser.add_argument("--stability", type=float, default=0.85)
+    parser.add_argument("--iou_dedup", type=float, default=0.12)
+
+    args = parser.parse_args()
+
+    if args.splits <= 0 or args.splits % 2 != 0:
+        parser.error("--splits must be a positive even integer, such as 2, 4, 6, or 8.")
+
+    return args
 
 
 def main():
-    # Default project files.
-    image_path = "mercury.jpg"
-    ckpt_path = "sam_vit_b_01ec64.pth"
-    deep_script = "deep_moocrade.py"
+    args = parse_arguments()
 
-    # Example:
-    #   python run_pipeline.py 6
-    # This means:
-    #   split Mercury.tif into 6 parts and run crater detection on each part.
-    if len(sys.argv) != 2:
-        print("Uso: python run_pipeline.py <n>")
-        print("Ejemplo: python run_pipeline.py 6")
-        sys.exit(1)
+    image_path = Path(args.image)
+    checkpoint_path = Path(args.checkpoint)
+    detector_script = Path(args.detector_script)
 
-    try:
-        n = int(sys.argv[1])
+    check_required_files(image_path, checkpoint_path, detector_script)
 
-        check_files(image_path, ckpt_path, deep_script)
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        output_dir = image_path.parent / f"{image_path.stem}_split_{args.splits}"
 
-        output_dir = Path(image_path).parent / f"{Path(image_path).stem}_split_{n}"
+    print("PCS split-image pipeline")
+    print("Input image:", image_path)
+    print("Number of splits:", args.splits)
+    print("Output directory:", output_dir)
 
-        # First, split the large Mercury.tif image.
-        parts = split_image(image_path, n, output_dir)
+    parts = split_image(image_path, args.splits, output_dir)
 
-        # Then, run MooCraDee on every split image.
-        for part in parts:
-            run_detector_on_part(part, ckpt_path, deep_script)
+    for part in parts:
+        run_detector_on_part(part, args)
 
-        # Finally, merge all small CSV files into one global CSV.
-        combine_csvs(parts, output_dir)
+    combined_csv = combine_part_csvs(parts, output_dir)
 
-        print("\nPipeline complete.")
-        print(f"Results saved in: {output_dir}")
-
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    print("\nPipeline complete.")
+    print("Results saved in:", output_dir)
+    print("Combined crater-candidate CSV:", combined_csv)
 
 
 if __name__ == "__main__":
     main()
+```
