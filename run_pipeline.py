@@ -8,7 +8,6 @@ This script:
 3. Saves one detected image and CSV per part.
 4. Combines all part-level CSV files into one crater-candidate table.
 """
-
 import argparse
 import subprocess
 from pathlib import Path
@@ -77,7 +76,8 @@ def run_detector_on_part(part, args):
 
     if result.returncode != 0:
         raise RuntimeError(
-            f"deep_moocrade.py failed on part {part_number}. Check log file: {log_file}"
+            f"deep_moocrade.py failed on part {part_number}. "
+            f"Check log file: {log_file}"
         )
 
 
@@ -150,6 +150,15 @@ def parse_arguments():
         description="Run PCS / MooCraDee on a planetary image using split-image processing."
     )
 
+    # Backward compatibility:
+    # Allows the prev command: python run_pipeline.py 6
+    parser.add_argument(
+        "n",
+        nargs="?",
+        type=int,
+        help="Optional positional number of splits for backward compatibility.",
+    )
+
     parser.add_argument(
         "--image",
         default="mercury.jpg",
@@ -181,6 +190,7 @@ def parse_arguments():
         help="Optional output directory. If not provided, one is created automatically.",
     )
 
+    # Detection parameters
     parser.add_argument("--min_radius", type=float, default=20)
     parser.add_argument("--max_radius", type=float, default=260)
     parser.add_argument("--min_circularity", type=float, default=0.35)
@@ -191,6 +201,10 @@ def parse_arguments():
     parser.add_argument("--iou_dedup", type=float, default=0.12)
 
     args = parser.parse_args()
+
+    # If the old positional argument is used, it overrides --splits.
+    if args.n is not None:
+        args.splits = args.n
 
     if args.splits <= 0 or args.splits % 2 != 0:
         parser.error("--splits must be a positive even integer, such as 2, 4, 6, or 8.")
@@ -217,18 +231,19 @@ def main():
     print("Number of splits:", args.splits)
     print("Output directory:", output_dir)
 
+    # Step 1: Split the selected image.
     parts = split_image(image_path, args.splits, output_dir)
 
+    # Step 2: Run crater-candidate detection on each image part.
     for part in parts:
         run_detector_on_part(part, args)
 
+    # Step 3: Combine all part-level detections into one CSV.
     combined_csv = combine_part_csvs(parts, output_dir)
 
     print("\nPipeline complete.")
     print("Results saved in:", output_dir)
     print("Combined crater-candidate CSV:", combined_csv)
 
-
 if __name__ == "__main__":
     main()
-```
