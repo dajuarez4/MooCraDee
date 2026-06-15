@@ -8,6 +8,7 @@ This script:
 3. Saves one detected image and CSV per part.
 4. Combines all part-level CSV files into one crater-candidate table.
 """
+
 import argparse
 import subprocess
 from pathlib import Path
@@ -31,7 +32,7 @@ def check_required_files(image_path, checkpoint_path, detector_script):
 
 
 def run_detector_on_part(part, args):
-    """Run deep_moocrade.py on one split image."""
+    """Run deep_moocrade.py on one split image and show progress live."""
     part_number = part["part_num"]
     part_folder = Path(part["part_folder"])
     input_image = Path(part["output_file"])
@@ -42,6 +43,7 @@ def run_detector_on_part(part, args):
 
     command = [
         "python",
+        "-u",
         str(args.detector_script),
         str(input_image),
         "--ckpt", str(args.checkpoint),
@@ -57,24 +59,29 @@ def run_detector_on_part(part, args):
         "--iou_dedup", str(args.iou_dedup),
     ]
 
-    print("\n" + "=" * 60)
-    print(f"Running detector on part {part_number}")
-    print(f"Input: {input_image}")
-    print(f"Output image: {detected_image}")
-    print(f"CSV: {part_csv}")
-    print("=" * 60)
+    print("\n" + "=" * 60, flush=True)
+    print(f"Running detector on part {part_number}", flush=True)
+    print(f"Input: {input_image}", flush=True)
+    print(f"Output image: {detected_image}", flush=True)
+    print(f"CSV: {part_csv}", flush=True)
+    print("=" * 60, flush=True)
 
-    result = subprocess.run(
-        command,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
+    with log_file.open("w", encoding="utf-8") as log:
+        process = subprocess.Popen(
+            command,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+        )
 
-    print(result.stdout)
-    log_file.write_text(result.stdout, encoding="utf-8")
+        for line in process.stdout:
+            print(line, end="", flush=True)
+            log.write(line)
 
-    if result.returncode != 0:
+        return_code = process.wait()
+
+    if return_code != 0:
         raise RuntimeError(
             f"deep_moocrade.py failed on part {part_number}. "
             f"Check log file: {log_file}"
@@ -140,7 +147,7 @@ def combine_part_csvs(parts, output_dir):
 
     combined_df.to_csv(combined_csv, index=False)
 
-    print(f"\nCombined CSV saved: {combined_csv}")
+    print(f"\nCombined CSV saved: {combined_csv}", flush=True)
     return combined_csv
 
 
@@ -151,7 +158,7 @@ def parse_arguments():
     )
 
     # Backward compatibility:
-    # Allows the prev command: python run_pipeline.py 6
+    # Allows the previous command: python run_pipeline.py 6
     parser.add_argument(
         "n",
         nargs="?",
@@ -226,10 +233,10 @@ def main():
     else:
         output_dir = image_path.parent / f"{image_path.stem}_split_{args.splits}"
 
-    print("PCS split-image pipeline")
-    print("Input image:", image_path)
-    print("Number of splits:", args.splits)
-    print("Output directory:", output_dir)
+    print("PCS split-image pipeline", flush=True)
+    print("Input image:", image_path, flush=True)
+    print("Number of splits:", args.splits, flush=True)
+    print("Output directory:", output_dir, flush=True)
 
     # Step 1: Split the selected image.
     parts = split_image(image_path, args.splits, output_dir)
@@ -238,12 +245,13 @@ def main():
     for part in parts:
         run_detector_on_part(part, args)
 
-    # Step 3: Combine all part-level detections into one CSV.
+    # Step 3: Combine all part-level detections into one crater-candidate table.
     combined_csv = combine_part_csvs(parts, output_dir)
 
-    print("\nPipeline complete.")
-    print("Results saved in:", output_dir)
-    print("Combined crater-candidate CSV:", combined_csv)
+    print("\nPipeline complete.", flush=True)
+    print("Results saved in:", output_dir, flush=True)
+    print("Combined crater-candidate CSV:", combined_csv, flush=True)
+
 
 if __name__ == "__main__":
     main()
